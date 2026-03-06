@@ -1,87 +1,168 @@
-# Traffic Monitoring & Violation Detection System
+# 🚦 Traffic Monitoring & Violation Detection System
 
-A comprehensive traffic monitoring solution using **YOLOv8** and multi-object tracking. Designed to handle multiple real-world scenarios including red-light violations, highway speed monitoring, wrong-way driving, and toll booth ANPR.
+> A comprehensive video analytics system using YOLOv8 and multi-object tracking to detect traffic violations and monitor road conditions in real time.
+
+---
+
+## 📋 Project Info
+
+| Field | Details |
+|---|---|
+| **Author** | Rutvik Prajapati |
+| **Course** | Computer Vision |
+| **Instructor** | Mr. Chintan Patel |
+| **Platform** | Google Colab |
+
+---
+
+## 🧐 What Does This Project Do? (Simple Explanation)
+
+This project watches **highway and road videos** and automatically detects traffic violations. It can:
+- Catch vehicles running a **red light**
+- Measure **vehicle speeds** on a highway
+- Flag cars going the **wrong way**
+- Read **license plates** at toll booths
+
+It uses **YOLOv8** (a state-of-the-art object detector) to find vehicles in every frame, then tracks each vehicle across frames to perform analysis.
 
 ---
 
 ## 🔹 Modules Overview
 
-### 1️⃣ Red-Light Violation Detection
-- 🚦 Detects vehicles crossing the **stop line** during a red signal.
-- 🆔 Tracks vehicle IDs and maintains history to avoid duplicate violation logging.
-- 🖌️ Visual overlays:
-  - Stop line
-  - Vehicle bounding boxes and IDs
-  - "VIOLATION!" alert
-  - Violation counter on the frame
+### 1. Red-Light Violation Detection
+- Detects vehicles crossing the **stop line** during a red signal
+- Tracks vehicle IDs to avoid duplicate violation logging
+- Visual overlays: stop line, bounding boxes, "VIOLATION!" alert, violation counter
+
+### 2. Highway Speed & Congestion Monitoring
+- Measures vehicle speed between **enter** and **exit** lines using real-world distances and frame timestamps
+- Detects **stopped vehicles** based on minimal displacement over multiple frames
+- Computes **rolling average speed** to indicate traffic congestion
+- Visual overlays: enter/exit lines, speed per vehicle, "STOPPED" label, average speed display
+
+### 3. Wrong-Way Driving Detection
+- Tracks the **trajectory** (path history) of each vehicle
+- Computes overall motion vector to flag vehicles going against the allowed direction
+- Visual overlays: red bounding box, "WRONG WAY!" alert, live counter
+
+### 4. Toll Booth / ANPR (Automatic Number Plate Recognition)
+- Detects vehicles approaching a **toll booth ROI** (region of interest)
+- Crops and zooms the vehicle for better OCR accuracy
+- Extracts license plate text using **Tesseract OCR**
+- Visual overlays: toll ROI rectangle, vehicle boxes, detected plate text
 
 ---
 
-### 2️⃣ Highway Speed & Congestion Monitoring
-- 🛣️ Measures vehicle speed between **enter** and **exit lines**.
-- ⏱️ Calculates speed using real-world distance and frame timestamps.
-- 🛑 Detects stopped vehicles based on minimal displacement over multiple frames.
-- 📊 Computes rolling average speed to indicate **traffic congestion**.
-- 🖌️ Visual overlays:
-  - Enter/Exit lines
-  - Speeds per vehicle
-  - "STOPPED" label for stationary vehicles
-  - Average speed display
+## 🔄 System Pipeline
+
+```
+Input Video (Highway / Road)
+        |
+        v
+Frame-by-Frame Extraction
+        |
+        v
+YOLOv8 Object Detection (detect vehicles)
+        |
+        v
+Multi-Object Tracking (ByteTrack / BoT-SORT)
+        |
+        v
+Per-Module Analysis:
+  +-- Red Light: line crossing check
+  +-- Speed: entry/exit timestamp delta
+  +-- Wrong Way: trajectory vector analysis
+  +-- ANPR: ROI crop + Tesseract OCR
+        |
+        v
+Draw Annotations on Frame
+        |
+        v
+Save Output Video / Display Live
+```
 
 ---
 
-### 3️⃣ Wrong-Way Driving Detection
-- ↩️ Detects vehicles moving **against the allowed direction**.
-- Tracks recent positions of each vehicle (trajectory history).
-- Computes overall motion vector to flag wrong-way driving.
-- 🖌️ Visual overlays:
-  - Red bounding box for wrong-way vehicles
-  - "WRONG WAY!" alert
-  - Live counter of wrong-way vehicles
+## 🛠️ Technologies Used
+
+| Library / Tool | Purpose |
+|---|---|
+| `ultralytics` (YOLOv8) | Vehicle detection in each frame |
+| `ByteTrack` / `BoT-SORT` | Multi-object tracking across frames |
+| `OpenCV` | Video I/O, frame annotation, drawing |
+| `Tesseract OCR` | License plate text extraction |
+| `NumPy` | Coordinate math, trajectory analysis |
 
 ---
 
-### 4️⃣ Toll Booth / ANPR (Automatic Number Plate Recognition)
-- 🚗 Detects vehicles approaching a toll booth ROI.
-- 🔍 Crops and zooms the vehicle bounding box for better OCR.
-- 📝 Extracts license plate text using **Tesseract OCR**.
-- 🖌️ Visual overlays:
-  - Toll ROI rectangle
-  - Vehicle bounding boxes
-  - Last detected license plate on frame center
-  - Plate text near vehicle
+## 📁 File Structure
+
+```
+Traffic monitoring Video analytics/
+|
++-- CVP_Traffic_Monitoring_Videos.ipynb   # Main notebook
++-- Highway video.mp4                     # Input highway footage
++-- highway_output.mp4                    # Output: speed monitoring
++-- highway_traffic_analysis.mp4          # Output: traffic analysis
++-- red_light_output.mp4                  # Output: red-light violations
++-- readme.md                             # Project readme
+```
 
 ---
 
-## ⚙️ Common Features
-- 🖥️ Supports **YOLOv8 models** (`yolov8n.pt`, `yolov8s.pt`) and **trackers** (ByteTrack / BoT-SORT).
-- 🔄 Modular pipeline using `process_frame_fn` for custom per-frame processing.
-- 💾 Option to **display live video** and/or **save annotated output**.
-- 🖌️ Consistent visual indicators across modules:
-  - Bounding boxes, IDs
-  - Alerts and violation labels
-  - Metrics like speed, congestion, plate numbers
+## 📊 Output Videos
+
+| Output File | What it shows |
+|---|---|
+| `red_light_output.mp4` | Vehicles caught running red lights |
+| `highway_output.mp4` | Speed and congestion monitoring |
+| `wrong_way_output.mp4` | Wrong-direction vehicles flagged |
+| `toll_output.mp4` | License plates read at toll booth |
 
 ---
 
-## 📌 Key Technical Concepts
-- Line crossing detection using trajectory points.
-- Vehicle speed estimation using real-world distances.
-- Trajectory-based detection for wrong-way driving.
-- ROI-based zooming and OCR for toll booth ANPR.
-- Rolling metrics for congestion analysis.
+## 🚀 How to Run
+
+1. Open `CVP_Traffic_Monitoring_Videos.ipynb` in Google Colab
+2. Install dependencies:
+```bash
+pip install ultralytics pytesseract opencv-python
+apt-get install tesseract-ocr
+```
+3. Upload your video or use the included `Highway video.mp4`
+4. Run the desired module cell
+5. Download the annotated output video
 
 ---
 
-## 🗂️ Output
-- Red-light violations → `/content/red_light_output.mp4`
-- Highway speed & congestion → `/content/highway_output.mp4`
-- Wrong-way driving → `/content/wrong_way_output.mp4`
-- Toll / ANPR → `/content/toll_output.mp4`
+## ⚙️ Key Technical Concepts
+
+- **Line crossing detection** — using vehicle trajectory points vs. defined lines
+- **Speed estimation** — real-world distance ÷ time between two virtual lines
+- **Trajectory-based wrong-way detection** — motion vector from position history
+- **ROI zooming + OCR** — crop vehicle bounding box, upscale, run Tesseract
+- **Rolling average** — congestion score from last N vehicle speeds
 
 ---
 
-> This modular framework can be extended for:
-> - Automatic traffic signal recognition
-> - Advanced license plate detection models
-> - Real-time dashboard monitoring
+## ⚠️ Limitations
+
+- Speed accuracy depends on correct calibration of real-world pixel-to-meter ratio
+- Tesseract OCR can struggle with low-resolution or angled plates
+- YOLO may miss heavily occluded vehicles in dense traffic
+- Wrong-way detection may produce false positives at intersections
+
+---
+
+## 📖 References
+
+- [Ultralytics YOLOv8 Docs](https://docs.ultralytics.com/)
+- [ByteTrack Paper](https://arxiv.org/abs/2110.06864)
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
+- [OpenCV Video I/O](https://docs.opencv.org/4.x/dd/d43/tutorial_py_video_display.html)
+
+---
+
+## 📄 License
+
+Educational project for a Computer Vision course.
