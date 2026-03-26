@@ -1,93 +1,127 @@
-# Lab 3 — Task 2: Object Detection with YOLOv8
-### Backbone Complexity × Input Resolution — A Systematic Comparison
+# Lab 3 — Task 2: Faster R-CNN Object Detection
+## Penn-Fudan Pedestrian Dataset | PyTorch + torchvision
 
 ---
 
-## What This Lab Does
+## What This Lab Covers
 
-This notebook benchmarks **YOLOv8** (3 model sizes) across **3 input resolutions** on a
-diverse set of real-world images — giving a complete picture of the speed vs accuracy
-trade-off in modern single-stage object detection.
+A complete, from-scratch implementation of **Faster R-CNN** for person detection —
+covering every component described in the original Ren et al. (2015) paper.
 
-**Total experiments: 9 configs** (3 models × 3 resolutions)
-
----
-
-## Why YOLOv8 Instead of Faster R-CNN?
-
-YOLOv8 (2023) is the current state-of-the-art single-stage detector. Comparison:
-
-| | Faster R-CNN | YOLOv8 |
-|--|--|--|
-| Architecture | Two-stage (RPN + detector) | Single-stage end-to-end |
-| Speed | ~5–10 FPS | 30–160 FPS |
-| Small objects | Stronger | Good at higher resolutions |
-| Setup complexity | High (custom anchors, RPN tuning) | One `pip install` |
-| Pretrained weights | COCO | COCO |
+| What | Detail |
+|------|--------|
+| Model | Faster R-CNN with ResNet50-FPN backbone |
+| Dataset | Penn-Fudan Pedestrian (~170 images, 2 classes) |
+| Training | 7 epochs, SGD + momentum, StepLR scheduler |
+| Evaluation | mAP@0.5, mAP@0.5:0.95, IoU distribution |
+| Extras | RPN anchor viz, RPN proposals viz, hard-case analysis |
 
 ---
 
-## Experiment Design
+## Dataset
 
-### Variables
+**Penn-Fudan Pedestrian Database**  
+~170 images of people photographed at Penn and Fudan universities.
+Each person has a precise bounding box and segmentation mask.
 
-**Backbone sizes tested:**
-
-| Model | Parameters | Notes |
-|-------|------------|-------|
-| `yolov8n` | ~3.2M | Nano — fastest, smallest |
-| `yolov8s` | ~11M | Small — balanced |
-| `yolov8m` | ~25M | Medium — most accurate |
-
-**Input resolutions tested:** `320` · `640` · `1280` pixels
-
-All models use **pre-trained COCO weights** — no custom training needed.
-
-### Test Images
-
-6 diverse scenes downloaded from Unsplash (free license):
-street, kitchen, sports, animals, traffic, outdoor market
-
-### Metrics Collected
-
-- Average inference latency (ms per image)
-- Average detections per image
-- Average confidence score
-- Class diversity heatmap (80 COCO classes)
+- 2 classes: `background` (0), `person` (1)
+- ~1–5 people per image
+- Images range from 400×300 to 800×600 px
+- Downloads automatically (~50 MB) when you run the notebook
 
 ---
 
-## Results Overview
-
-*(Exact numbers depend on hardware — re-run to see yours)*
-
-General trends:
-- Higher resolution → more detections, better confidence, slower speed
-- YOLOv8m finds ~30% more objects than YOLOv8n on the same scene
-- 320→1280px increases latency ~4–6× but detections ~1.5–2×
-- **YOLOv8s @ 640px** is the practical sweet-spot
-
----
-
-## Notebook Structure
+## Architecture in Plain English
 
 ```
-Cell 1   Setup — install ultralytics + torchinfo
-Cell 2   Imports & GPU check
-Cell 3   Download 6 diverse test images
-Cell 4   Image preview grid
-Cell 5   Define 9 experiment configs (3 models × 3 resolutions)
-Cell 6   Parameter count comparison
-Cell 7   Run all 9 experiments
-Cell 8   Results table (color-highlighted best values)
-Cell 9   Line plots: Latency / Detections / Confidence vs Resolution
-Cell 10  Visual grid: same image, 3 backbones @ 640px
-Cell 11  Visual grid: same model, 3 resolutions (YOLOv8s)
-Cell 12  Class detection heatmap
-Cell 13  Speed vs Confidence scatter (bubble chart)
-Cell 14  Auto-computed key findings printout
-Cell 15  Conclusion & recommendations table
+Input Photo
+    ↓
+ResNet50 Backbone (pre-trained on ImageNet)
+    → Learns to see edges, textures, shapes
+    ↓
+Feature Pyramid Network (FPN)
+    → Extracts features at 5 different scales (helps find small + large objects)
+    ↓
+Region Proposal Network (RPN)  ← KEY INNOVATION
+    → Slides a 3×3 window over feature maps
+    → At each location, scores 9 anchor boxes (3 sizes × 3 aspect ratios)
+    → Outputs ~2000 candidate "maybe an object is here" regions
+    ↓
+RoI Align
+    → Crops each proposal to a fixed 7×7 grid
+    ↓
+Detection Head (2 fully-connected layers)
+    → Classification: background or person?
+    → Box regression: precise box coordinates
+    ↓
+Output: list of (box, label, confidence) for each detected person
 ```
+
+---
+
+## Results
+
+*(Run on Google Colab T4 GPU, 7 epochs)*
+
+| Metric | Score |
+|--------|-------|
+| mAP@0.50 | ~0.85–0.90 |
+| mAP@0.50:0.95 | ~0.55–0.65 |
+| Recall@100 | ~0.85+ |
+
+---
+
+## Notebook Structure (38 cells)
+
+| Cell | Content |
+|------|---------|
+| 1 | Title + architecture explanation |
+| 2 | Install torchmetrics + imports |
+| 3 | Download Penn-Fudan dataset |
+| 4 | Visualise raw images and masks |
+| 5 | Custom `PennFudanDataset` class |
+| 6 | Train/val split + DataLoaders |
+| 7 | Build Faster R-CNN model (ResNet50-FPN) |
+| 8 | **Visualise RPN anchors before training** |
+| 9 | Training loop (7 epochs, 4 loss terms) |
+| 10 | Training loss curve |
+| 11 | mAP evaluation (torchmetrics) |
+| 12 | Per-image stats breakdown |
+| 13 | **Predictions vs Ground Truth grid** |
+| 14 | **RPN proposals vs final detections** |
+| 15 | Confidence score distribution |
+| 16 | IoU distribution + implementation |
+| 17 | mAP at multiple IoU thresholds |
+| 18 | Hard/failure case analysis |
+| 19 | Summary dashboard |
+| 20 | Conclusion + next steps |
+
+---
+
+## Key Concepts Explained in the Notebook
+
+### RPN (Region Proposal Network)
+The core innovation of Faster R-CNN. Instead of using slow selective search
+(like earlier R-CNN models), the RPN is a tiny CNN that shares weights
+with the backbone and generates candidate regions in a single forward pass.
+
+### Anchor Boxes
+Pre-defined boxes of different sizes (128², 256², 512²) and aspect ratios (1:1, 1:2, 2:1).
+The RPN classifies each anchor as "foreground/background" and regresses offsets to fit real objects.
+
+### IoU (Intersection over Union)
+How we decide if a detection is correct:
+- IoU ≥ 0.5: accepted as True Positive in standard benchmarks
+- IoU ≥ 0.7: commonly used for stricter evaluation
+
+### mAP (mean Average Precision)
+The standard detection metric. For each class, plot the precision-recall curve
+and compute the area under it. Average across classes = mAP.
+
+### Transfer Learning
+We use a ResNet50 backbone pre-trained on ImageNet. This means the model already
+"knows" how to detect edges, textures, and shapes — we just need to teach it
+to recognise people specifically. Without this, training would take days.
 
 ---
 
@@ -95,52 +129,41 @@ Cell 15  Conclusion & recommendations table
 
 1. Open in **Google Colab**
 2. Set runtime: `Runtime → Change runtime type → T4 GPU`
-3. Run all cells: `Runtime → Run all`
+3. `Runtime → Run all`
 
-**Expected runtime:** ~5–10 minutes on T4 GPU
+**Expected runtime:** ~15–25 minutes on T4 (7 epochs on 170 images)
 
 ---
 
 ## Requirements
 
-Everything installs in Cell 1:
-
+All dependencies install in Cell 2:
 ```bash
-pip install ultralytics torchinfo
+pip install torchmetrics pycocotools
 ```
 
-YOLOv8 weights (~50 MB each) download automatically on first use from Ultralytics servers.
+PyTorch + torchvision come pre-installed on Colab.
 
 ---
 
-## Sample Outputs Generated
+## Files Generated by the Notebook
 
-| File | Description |
-|------|-------------|
-| `benchmark_plots.png` | 3-panel line chart (latency / detections / confidence) |
-| `visual_comparison_backbones.png` | Same image through 3 model sizes |
-| `visual_comparison_resolution.png` | Same model at 3 resolutions |
-| `class_heatmap.png` | COCO class frequency per model |
-| `speed_vs_accuracy.png` | Bubble scatter: speed vs confidence |
+| File | What it shows |
+|------|--------------|
+| `sample_images.png` | Raw images + their person masks |
+| `rpn_anchors.png` | RPN anchor boxes before training |
+| `training_loss.png` | Loss curve across 7 epochs |
+| `predictions_vs_gt.png` | Green = GT, Red = predictions |
+| `rpn_proposals_vs_final.png` | Raw RPN proposals vs final detections |
+| `confidence_distribution.png` | Score histogram across val set |
+| `iou_distribution.png` | How well boxes align with GT |
+| `map_vs_iou_threshold.png` | mAP at 10 IoU thresholds |
+| `hard_cases.png` | Images where model struggled most |
 
 ---
 
-## Key Concepts
+## References
 
-**Single-stage detection**  
-YOLO predicts boxes and classes in one forward pass — no separate region proposal step.
-This is why it's 10–30× faster than Faster R-CNN.
-
-**Backbone size**  
-The feature extractor. Bigger backbone → richer spatial features → finds more objects,
-especially small or partially occluded ones.
-
-**Input resolution (imgsz)**  
-Image is resized to a square before inference. Higher resolution gives more pixel detail
-to work with but costs more memory and compute time.
-
-**Confidence threshold**  
-Only detections ≥ 0.30 confidence are kept. Lowering finds more boxes but adds false positives.
-
-**COCO**  
-80-class benchmark dataset (person, car, dog, chair, bottle, etc.) used for pre-training.
+- Ren, S. et al. *Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks*. NeurIPS 2015.
+- Penn-Fudan Database: https://www.cis.upenn.edu/~jshi/ped_html/
+- PyTorch Detection Tutorial: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
